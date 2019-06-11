@@ -17,27 +17,27 @@ import (
 // Block contains data that will be written to the blockchain.
 type Block struct {
 	Pos       int
-	Data      BookCheckout
+	Data      MedicalRecordCheckout
 	Timestamp string
 	Hash      string
 	PrevHash  string
 }
 
-// BookCheckout contains data for a checked out book
-type BookCheckout struct {
-	BookID       string `json:"book_id"`
+// MedicalRecordCheckout contains data for a checked out MedicalRecord
+type MedicalRecordCheckout struct {
+	PatientID    string `json:"patient_id"`
 	User         string `json:"user"`
+	Role         string `json:"role"`
 	CheckoutDate string `json:"checkout_date"`
 	IsGenesis    bool   `json:"is_genesis"`
 }
 
-// Book contains data for a sample book
-type Book struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
+// MedicalRecord contains data for a sample patient's medical record
+type MedicalRecord struct {
+	PatientID   string `json:"patient_id"`
+	FullName    string `json:"full_name"`
 	Author      string `json:"author"`
 	PublishDate string `json:"publish_date"`
-	ISBN        string `json:"isbn:`
 }
 
 func (b *Block) generateHash() {
@@ -50,7 +50,7 @@ func (b *Block) generateHash() {
 	b.Hash = hex.EncodeToString(hash.Sum(nil))
 }
 
-func CreateBlock(prevBlock *Block, checkoutItem BookCheckout) *Block {
+func CreateBlock(prevBlock *Block, checkoutItem MedicalRecordCheckout) *Block {
 	block := &Block{}
 	block.Pos = prevBlock.Pos + 1
 	block.Timestamp = time.Now().String()
@@ -70,7 +70,7 @@ type Blockchain struct {
 var BlockChain *Blockchain
 
 // AddBlock adds a Block to a Blockchain
-func (bc *Blockchain) AddBlock(data BookCheckout) {
+func (bc *Blockchain) AddBlock(data MedicalRecordCheckout) {
 	// get previous block
 	prevBlock := bc.blocks[len(bc.blocks)-1]
 	// create new block
@@ -82,7 +82,7 @@ func (bc *Blockchain) AddBlock(data BookCheckout) {
 }
 
 func GenesisBlock() *Block {
-	return CreateBlock(&Block{}, BookCheckout{IsGenesis: true})
+	return CreateBlock(&Block{}, MedicalRecordCheckout{IsGenesis: true})
 }
 
 func NewBlockchain() *Blockchain {
@@ -125,7 +125,7 @@ func getBlockchain(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeBlock(w http.ResponseWriter, r *http.Request) {
-	var checkoutItem BookCheckout
+	var checkoutItem MedicalRecordCheckout
 	if err := json.NewDecoder(r.Body).Decode(&checkoutItem); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("could not write Block: %v", err)
@@ -145,26 +145,26 @@ func writeBlock(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func newBook(w http.ResponseWriter, r *http.Request) {
-	var book Book
-	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+func newMedicalRecord(w http.ResponseWriter, r *http.Request) {
+	var medicalRecord MedicalRecord
+	if err := json.NewDecoder(r.Body).Decode(&medicalRecord); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("could not create: %v", err)
-		w.Write([]byte("could not create new Book"))
+		w.Write([]byte("could not create new MedicalRecord"))
 		return
 	}
 	// We'll create an ID, concatenating the isdb and publish date
 	// This isn't an efficient way but serves for this tutorial
 	h := md5.New()
-	io.WriteString(h, book.ISBN+book.PublishDate)
-	book.ID = fmt.Sprintf("%x", h.Sum(nil))
+	io.WriteString(h, medicalRecord.ISBN+medicalRecord.PublishDate)
+	medicalRecord.PatientID = fmt.Sprintf("%x", h.Sum(nil))
 
 	// send back payload
-	resp, err := json.MarshalIndent(book, "", " ")
+	resp, err := json.MarshalIndent(medicalRecord, "", " ")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("could not marshal payload: %v", err)
-		w.Write([]byte("could not save book data"))
+		w.Write([]byte("could not save medicalRecord data"))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -179,7 +179,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", getBlockchain).Methods("GET")
 	r.HandleFunc("/", writeBlock).Methods("POST")
-	r.HandleFunc("/new", newBook).Methods("POST")
+	r.HandleFunc("/new", newMedicalRecord).Methods("POST")
 
 	// dump the state of the Blockchain to the console
 	go func() {
