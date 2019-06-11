@@ -1,36 +1,46 @@
-## Building a Simple Blockchain with Go
+# EMR blockchain project
 
-In this tutorial, I'll attempt to demystify the broad concept of the blockchain, by helping you write a simple Blockchain in Go.
+A blockchain-based Electronic Medical Record management, with roles permissions.
 
-### Tutorial
-[Read Now]()
+## Tutorial
 
-### Installation/Usage
-Clone Repository
-```shell
-$ git clone https://github.com/codehakase/blockchain-golang-tutorial.git
-```
+This project was started following [this tutorial](https://www.codementor.io/codehakase/building-a-simple-blockchain-with-go-k7crur06v).
 
-**Run app**
+## Usage
+
+### Run app
+
 ```shell
 $ go run blockchain.go
 
 ```
 
-**Create Blocks**
-```shell
-$ curl -X POST http://localhost:3000/new \
-	-H "Content-Type: application/json" \
-	-d '{"title": "Sample Book", "author":"John Doe", "isbn":"909090","publish_date":"2018-05-26"}'
+### Create book
 
-$ curl -X POST http://localhost:3000 \
-	-H "Content-Type: application/json" \
-	-d '{"book_id": "generated_id", "user": "Mary Doe", "checkout_date":"2018-05-28"}'
+```json
+POST http://localhost:3000/new
+
+body: {
+	"title": "Book",
+	"author":"JohnDoe",
+	"isbn":"909090",
+	"publish_date":"2018-02-01"
+}
 ```
 
-**View in Browser**
-Navigate to `http://localhost:3000` to view the full blocks
+### Create block
 
-### Screenshot
-![golang-blockchain-terminal-prev](https://user-images.githubusercontent.com/9336187/40704543-4fe4b6fa-63e0-11e8-9ecd-1e3a8e082eef.png)
-![golang-blockchain-main](https://user-images.githubusercontent.com/9336187/40705316-83a9e3e6-63e2-11e8-91a4-60bc9e6799e0.png)
+```json
+POST http://localhost:3000
+
+body:
+{
+	"book_id": "id_generated_with_previous_request",
+	"user": "john Doe",
+	"checkout_date":"2018-01-01"
+}
+```
+
+### Get blockchain
+
+GET `http://localhost:3000`
