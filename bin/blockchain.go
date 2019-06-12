@@ -16,7 +16,7 @@ import (
 
 // Block contains data that will be written to the blockchain.
 type Block struct {
-	Pos       int
+	Position  int
 	Data      Transaction
 	Timestamp string
 	Hash      string
@@ -41,19 +41,19 @@ type User struct {
 
 // MedicalRecord is the Wallet, containing data about patient's medical record
 type MedicalRecord struct {
-	WalletAddress string `json:"wallet_address"`
-	FullName      string `json:"full_name"`
-	Operations    string `json:"operations"`
-	Prescriptions string `json:"prescriptions"`
-	Allergies     string `json:"allergies"`
-	CreationDate  string `json:"creation_date"`
+	WalletAddress string   `json:"wallet_address"`
+	FullName      string   `json:"full_name"`
+	Operations    []string `json:"operations"`
+	Prescriptions []string `json:"prescriptions"`
+	Allergies     []string `json:"allergies"`
+	CreationDate  string   `json:"creation_date"`
 }
 
 func (b *Block) generateHash() {
 	// get string val of the Data
 	bytes, _ := json.Marshal(b.Data)
 	// concatenate the dataset
-	data := string(b.Pos) + b.Timestamp + string(bytes) + b.PrevHash
+	data := string(b.Position) + b.Timestamp + string(bytes) + b.PrevHash
 	hash := sha256.New()
 	hash.Write([]byte(data))
 	b.Hash = hex.EncodeToString(hash.Sum(nil))
@@ -61,7 +61,7 @@ func (b *Block) generateHash() {
 
 func CreateBlock(prevBlock *Block, transaction Transaction) *Block {
 	block := &Block{}
-	block.Pos = prevBlock.Pos + 1
+	block.Position = prevBlock.Position + 1
 	block.Timestamp = time.Now().String()
 	block.Data = transaction
 	block.PrevHash = prevBlock.Hash
@@ -109,7 +109,7 @@ func validBlock(block, prevBlock *Block) bool {
 		return false
 	}
 	// Check the position to confirm its been incremented
-	if prevBlock.Pos+1 != block.Pos {
+	if prevBlock.Position+1 != block.Position {
 		return false
 	}
 	return true
@@ -200,9 +200,16 @@ func main() {
 	// register router
 	r := mux.NewRouter()
 	r.HandleFunc("/", getBlockchain).Methods("GET")
-	r.HandleFunc("/new-transaction", writeBlock).Methods("POST")
-	r.HandleFunc("/new-wallet", newMedicalRecord).Methods("POST")
+
+	r.HandleFunc("/transaction", writeBlock).Methods("GET")
+	r.HandleFunc("/transaction", writeBlock).Methods("POST")
+
+	r.HandleFunc("/wallet", newMedicalRecord).Methods("GET")
+	r.HandleFunc("/wallet", newMedicalRecord).Methods("POST")
+
 	// TODO: new user
+	// r.HandleFunc("/user", newMedicalRecord).Methods("GET")
+	// r.HandleFunc("/user", newMedicalRecord).Methods("POST")
 
 	// dump the state of the Blockchain to the console
 	go func() {
