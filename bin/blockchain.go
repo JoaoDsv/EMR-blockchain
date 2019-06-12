@@ -17,27 +17,37 @@ import (
 // Block contains data that will be written to the blockchain.
 type Block struct {
 	Pos       int
-	Data      MedicalRecordCheckout
+	Data      Transaction
 	Timestamp string
 	Hash      string
 	PrevHash  string
 }
 
-// MedicalRecordCheckout contains data for a checked out MedicalRecord
-type MedicalRecordCheckout struct {
-	PatientID    string `json:"patient_id"`
-	User         string `json:"user"`
-	Role         string `json:"role"`
-	CheckoutDate string `json:"checkout_date"`
-	IsGenesis    bool   `json:"is_genesis"`
+// Transaction contains data for a checked out MedicalRecord
+type Transaction struct {
+	WalletAddress string `json:"wallet_address"`
+	UserID        string `json:"user_id"`
+	UserRole      string `json:"user_role"`
+	UpdatedKey    string `json:"updated_key"`
+	UpdatedValue  string `json:"updated_value"`
+	UpdatedAt     string `json:"updated_at"`
+	IsGenesis     bool   `json:"is_genesis"`
 }
 
-// MedicalRecord contains data for a sample patient's medical record
+// User contains data about user and role
+type User struct {
+	ID   string `json:"id"`
+	Role string `json:"role"`
+}
+
+// MedicalRecord is the Wallet, containing data about patient's medical record
 type MedicalRecord struct {
-	PatientID   string `json:"patient_id"`
-	FullName    string `json:"full_name"`
-	Author      string `json:"author"`
-	PublishDate string `json:"publish_date"`
+	WalletAddress string `json:"wallet_address"`
+	FullName      string `json:"full_name"`
+	Operations    string `json:"operations"`
+	Prescriptions string `json:"prescriptions"`
+	Allergies     string `json:"allergies"`
+	CreationDate  string `json:"creation_date"`
 }
 
 func (b *Block) generateHash() {
@@ -50,11 +60,11 @@ func (b *Block) generateHash() {
 	b.Hash = hex.EncodeToString(hash.Sum(nil))
 }
 
-func CreateBlock(prevBlock *Block, checkoutItem MedicalRecordCheckout) *Block {
+func CreateBlock(prevBlock *Block, transaction Transaction) *Block {
 	block := &Block{}
 	block.Pos = prevBlock.Pos + 1
 	block.Timestamp = time.Now().String()
-	block.Data = checkoutItem
+	block.Data = transaction
 	block.PrevHash = prevBlock.Hash
 	block.generateHash()
 
@@ -70,19 +80,20 @@ type Blockchain struct {
 var BlockChain *Blockchain
 
 // AddBlock adds a Block to a Blockchain
-func (bc *Blockchain) AddBlock(data MedicalRecordCheckout) {
+func (bc *Blockchain) AddBlock(data Transaction) {
 	// get previous block
 	prevBlock := bc.blocks[len(bc.blocks)-1]
 	// create new block
 	block := CreateBlock(prevBlock, data)
-	//  validate integrity of blocks
+	// validate integrity of blocks
 	if validBlock(block, prevBlock) {
+		// TODO: and if role permission okay
 		bc.blocks = append(bc.blocks, block)
 	}
 }
 
 func GenesisBlock() *Block {
-	return CreateBlock(&Block{}, MedicalRecordCheckout{IsGenesis: true})
+	return CreateBlock(&Block{}, Transaction{IsGenesis: true})
 }
 
 func NewBlockchain() *Blockchain {
@@ -102,6 +113,12 @@ func validBlock(block, prevBlock *Block) bool {
 	if prevBlock.Pos+1 != block.Pos {
 		return false
 	}
+	return true
+}
+
+func validRole(userRole string) bool {
+	// TODO: get user by UserID
+	log.Printf("userRole: %v", userRole)
 	return true
 }
 
@@ -125,24 +142,30 @@ func getBlockchain(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeBlock(w http.ResponseWriter, r *http.Request) {
-	var checkoutItem MedicalRecordCheckout
-	if err := json.NewDecoder(r.Body).Decode(&checkoutItem); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("could not write Block: %v", err)
-		w.Write([]byte("could not write block"))
-		return
+	var transaction Transaction
+	if validRole(transaction.UserRole) {
+		// Handle error
+		if err := json.NewDecoder(r.Body).Decode(&transaction); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("could not write Block: %v", err)
+			w.Write([]byte("could not write block"))
+			return
+		}
+
+		// Create block
+		BlockChain.AddBlock(transaction)
+		resp, err := json.MarshalIndent(transaction, "", " ")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("could not marshal payload: %v", err)
+			w.Write([]byte("could not write block"))
+			return
+		}
+
+		// Response
+		w.WriteHeader(http.StatusOK)
+		w.Write(resp)
 	}
-	// create block
-	BlockChain.AddBlock(checkoutItem)
-	resp, err := json.MarshalIndent(checkoutItem, "", " ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("could not marshal payload: %v", err)
-		w.Write([]byte("could not write block"))
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
 }
 
 func newMedicalRecord(w http.ResponseWriter, r *http.Request) {
@@ -156,8 +179,8 @@ func newMedicalRecord(w http.ResponseWriter, r *http.Request) {
 	// We'll create an ID, concatenating the isdb and publish date
 	// This isn't an efficient way but serves for this tutorial
 	h := md5.New()
-	io.WriteString(h, medicalRecord.ISBN+medicalRecord.PublishDate)
-	medicalRecord.PatientID = fmt.Sprintf("%x", h.Sum(nil))
+	io.WriteString(h, medicalRecord.FullName+medicalRecord.CreationDate)
+	medicalRecord.WalletAddress = fmt.Sprintf("%x", h.Sum(nil))
 
 	// send back payload
 	resp, err := json.MarshalIndent(medicalRecord, "", " ")
