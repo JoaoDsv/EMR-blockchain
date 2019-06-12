@@ -30,7 +30,6 @@ type Transaction struct {
 	UserRole      string `json:"user_role"`
 	UpdatedKey    string `json:"updated_key"`
 	UpdatedValue  string `json:"updated_value"`
-	UpdatedAt     string `json:"updated_at"`
 	IsGenesis     bool   `json:"is_genesis"`
 }
 
@@ -201,8 +200,9 @@ func main() {
 	// register router
 	r := mux.NewRouter()
 	r.HandleFunc("/", getBlockchain).Methods("GET")
-	r.HandleFunc("/", writeBlock).Methods("POST")
-	r.HandleFunc("/new", newMedicalRecord).Methods("POST")
+	r.HandleFunc("/new-transaction", writeBlock).Methods("POST")
+	r.HandleFunc("/new-wallet", newMedicalRecord).Methods("POST")
+	// TODO: new user
 
 	// dump the state of the Blockchain to the console
 	go func() {
